@@ -1,3 +1,4 @@
+local runLater = require("runLater")
 --log("Zora model")
 
 --hide vanilla model
@@ -32,13 +33,26 @@ function events.render(delta, context)
   --code goes here
 end
 
+-- Shut eye on damage animation
+function events.damage()
+  models.model.root.Head.Eyes.Open:setVisible(false)
+  models.model.root.Head.Eyes.Closed:setVisible(true)
+  
+  runLater(20, function()
+    models.model.root.Head.Eyes.Open:setVisible(true)
+    models.model.root.Head.Eyes.Closed:setVisible(false)
+  end)  
+end
+
+-- Play notification when mentioned
 function events.chat_receive_message(raw, text)
   if raw:find("%[lua%]") or raw:find("%[Debug%]") or (not raw:find("<") and not raw:find(">")) then
     return
   end
 
-  --log(client.getViewer()) -- TODO: Make work for other usernames
-
+  -- TODO: Make work for other usernames
+  -- TODO: Check that a player containing "zed" isnt sending the message
+  --log(client.getViewer())
   if raw:find("<Zedorf>") then
     return
   end
