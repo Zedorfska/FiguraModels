@@ -34,33 +34,34 @@ function events.render(delta, context)
 end
 
 -- Shut eye on damage animation
+is_taking_damage = false
 function events.damage()
-  models.model.root.Head.Eyes.Open:setVisible(false)
-  models.model.root.Head.Eyes.Closed:setVisible(true)
-  
-  runLater(20, function()
-    models.model.root.Head.Eyes.Open:setVisible(true)
-    models.model.root.Head.Eyes.Closed:setVisible(false)
-  end)  
+  if not is_taking_damage then
+    is_taking_damage = true
+    models.model.root.Head.Eyes.Open:setVisible(false)
+    models.model.root.Head.Eyes.Closed:setVisible(true)
+
+    runLater(10, function()
+      models.model.root.Head.Eyes.Open:setVisible(true)
+      models.model.root.Head.Eyes.Closed:setVisible(false)
+      is_taking_damage = false
+    end)
+  end
 end
 
 -- Play notification when mentioned
 function events.chat_receive_message(raw, text)
-  if raw:find("%[lua%]") or raw:find("%[Debug%]") or (not raw:find("<") and not raw:find(">")) then
+  if not text:find("^{\"translate\":\"chat.type.text\",") then
     return
   end
 
-  -- TODO: Make work for other usernames
-  -- TODO: Check that a player containing "zed" isnt sending the message
-  --log(client.getViewer())
-  if raw:find("<Zedorf>") then
+  sender_name = raw:match("<(.-)>")
+  if sender_name == client.getViewer():getName() then
     return
   end
 
   sanitised = raw:match(">(.+)")
-
   if sanitised:find("zed") or sanitised:find("Zed") then
-    sounds:playSound("lawnotify", player:getPos())
-    log("Message with Zed")
+    sounds:playSound("ringers3", player:getPos())
   end
 end
