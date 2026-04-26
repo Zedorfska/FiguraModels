@@ -1,5 +1,6 @@
 runLater = require("APIs.runLater")
 confetti = require("APIs.confetti")
+zed = require("APIs.zed")
 log("Zora model")
 
 nameplate.ALL:setText("Zora")
@@ -137,8 +138,7 @@ end
 --=== MISC ===--
 --===      ===--
 
---=== Chat bubble spawn logic ===--
-function events.chat_send_message(msg)
+function pings.bubble(msg)
   message_type = "default"
   if msg:match"?$" then
     message_type = "question"
@@ -208,13 +208,18 @@ function events.chat_send_message(msg)
   else
     sounds:playSound("Sounds.Speak.Question", player:getPos())
   end
+end
+
+--=== Chat bubble spawn logic ===--
+function events.chat_send_message(msg)
+  pings.bubble(msg)
   
   return msg
 end
 
 
 --=== Play notification when mentioned ===--
-function pings.playRingtone()
+function pings.playRingtone() -- Required outside due to chat_recieve_message() being clientside
   sounds:playSound("Sounds.ringers3", player:getPos())
 end
 
