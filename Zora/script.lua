@@ -1,7 +1,10 @@
+-- Zora avatar by Zedorfska
+-- This avatar does require modfying chat messages to be on.
+
+-- List of APIs used below:
 runLater = require("APIs.runLater")
 confetti = require("APIs.confetti")
-zed = require("APIs.zed")
-log("Zora model")
+chatbubble = require("APIs.chatbubble")
 
 nameplate.ALL:setText("Zora")
 nameplate.ENTITY:setPos(0, 0.2, 0)
@@ -11,8 +14,6 @@ vanilla_model.ARMOR:setVisible(false)
 vanilla_model.HELMET_ITEM:setVisible(true)
 vanilla_model.CAPE:setVisible(false)
 vanilla_model.ELYTRA:setVisible(false)
-
-local chatBubbles = {}
 
 function events.entity_init()
   -- Experimental: Hiding the Figura logo. From some random person in the Discord
@@ -42,42 +43,6 @@ end
 was_blocking = false
 
 function events.tick()
-  --=== Chat bubble tick logic ===--
-  for i = #chatBubbles, 1, -1 do
-    local bubble = chatBubbles[i]
-    bubble.lifetime = bubble.lifetime - 1
-
-    local progress = bubble.lifetime / bubble.totalLifetime
-    local rise = (1 - progress) * 4
-
-    bubble.root:setPos(
-      bubble.startPos.x * 16,
-      bubble.startPos.y * 16 + rise,
-      bubble.startPos.z * 16
-    )
-
-    local FADE_IN = 2
-    local FADE_OUT = 40
-
-    if bubble.lifetime > bubble.totalLifetime - FADE_IN then
-      local opacity = 1 - (bubble.lifetime - (bubble.totalLifetime - FADE_IN)) / FADE_IN
-      bubble.task:setOpacity(opacity)
-      bubble.task:setBackgroundColor(0, 0, 0, 0.5 * opacity)
-    elseif bubble.lifetime <= FADE_OUT then
-      local opacity = bubble.lifetime / FADE_OUT
-      bubble.task:setOpacity(opacity)
-      bubble.task:setBackgroundColor(0, 0, 0, 0.5 * opacity)
-    else
-      bubble.task:setOpacity(1)
-      bubble.task:setBackgroundColor(0, 0, 0, 0.5)
-    end
-
-    if bubble.lifetime <= 0 then
-      models:removeChild(bubble.root)
-      table.remove(chatBubbles, i)
-    end
-  end 
-
   --=== Shield blocking ===--
   if player:isBlocking() and not was_blocking then
     sounds:playSound("Sounds.Generic_Shove_1", player:getPos())
@@ -138,83 +103,26 @@ end
 --=== MISC ===--
 --===      ===--
 
-function pings.bubble(msg)
-  message_type = "default"
-  if msg:match"?$" then
-    message_type = "question"
-  end
-  if msg == msg:upper() or msg:match"!$" then
-    message_type = "exclamation"
-  end
-
-  local pos = player:getPos()
-  local look = player:getLookDir()
-
-  local minDist = 0.6
-  local maxDist = 0.6
-  local spread = 2
-  local depth = minDist + math.random() * (maxDist - minDist)
-  local height = 0.5
-
-  local spawnPos = pos + vec(
-    look.x * depth + (math.random() - 0.5) * spread,
-    2.2 + (math.random() - 0.5) * height,
-    look.z * depth + (math.random() - 0.5) * spread
-  )
-
-  -- fucked up bullshit
-  local root = models:newPart("chatbubble_" .. tostring(world.getTime()), "World")
-  local camPart = root:newPart("cam"):setParentType("CAMERA")
-
-  local displayMsg = msg
-  local displayScale = 0.33
-  if msg:sub(-2) == "!!" then
-    displayMsg = '{"bold":true,"text":"' .. msg .. '"}'
-    displayScale = 0.5
-  end
-  if msg:sub(-2) == ".." or msg:sub(-3) == "..?" then
-    displayMsg = '{"italic":true,"text":"' .. msg .. '"}'
-    displayScale = 0.25
-  end
-
-  local task = camPart:newText("bubble")
-  task:setText(displayMsg)
-      :setAlignment("CENTER")
-      :setBackground(true)
-      :setBackgroundColor(0, 0, 0, 0.5)
-      :setSeeThrough(false)
-      :setScale(displayScale, displayScale, displayScale)
-      :setOpacity(0)
-      :setBackgroundColor(0, 0, 0, 0)
-
-  root:setPos(
-    spawnPos.x * 16,
-    (spawnPos.y + 2.4) * 16,
-    spawnPos.z * 16
-  )
-
-  table.insert(chatBubbles, {
-    root = root,
-    task = task,
-    lifetime = 100,
-    totalLifetime = 100,
-    startPos = spawnPos,
-  })
-  
-  if message_type == "default" then
-    sounds:playSound("Sounds.Speak.Default", player:getPos())
-  elseif message_type == "exclamation" then
-    sounds:playSound("Sounds.Speak.Exclamation", player:getPos())
-  else
-    sounds:playSound("Sounds.Speak.Question", player:getPos())
-  end
-end
-
 --=== Chat bubble spawn logic ===--
 function events.chat_send_message(msg)
-  pings.bubble(msg)
-  
-  return msg
+  local message_type = "default"
+  if msg:match("?$") then
+    chatbubble:say(msg)
+    sounds:playSound("Sounds.Speak.Question", player:getPos())
+  elseif msg == msg:upper() or msg:match("!$") then
+    chatbubble:say_bold(msg)
+    sounds:playSound("Sounds.Speak.Exclamation", player:getPos())
+  else
+    chatbubble:say(msg)
+    sounds:playSound("Sounds.Speak.Default", player:getPos())
+  end
+
+  local modifier = msg:sub(1, 1)
+  if modifier == ";" then
+    local cleanMsg = msg:sub(2)
+    return cleanMsg
+  end
+  return
 end
 
 
@@ -224,6 +132,10 @@ function pings.playRingtone() -- Required outside due to chat_recieve_message() 
 end
 
 function events.chat_receive_message(raw, text)
+  if not player:isLoaded() then
+    return
+  end
+  
   if not text:find("^{\"translate\":\"chat.type.text\",") then
     return
   end
