@@ -1,33 +1,87 @@
--- Auto generated script file --
+-- Ziwa avatar by Zedorfska
+-- This avatar does require modfying chat messages to be on.
 
---hide vanilla model
+-- List of APIs used below:
+chatbubble = require("APIs.chatbubble")
+
+nameplate.ALL:setText("pipi Siwa")
+nameplate.ENTITY:setPos(0, 0.2, 0)
+
 vanilla_model.PLAYER:setVisible(false)
-
---hide vanilla armor model
 vanilla_model.ARMOR:setVisible(false)
---re-enable the helmet item
 vanilla_model.HELMET_ITEM:setVisible(true)
-
---hide vanilla cape model
 vanilla_model.CAPE:setVisible(false)
-
---hide vanilla elytra model
 vanilla_model.ELYTRA:setVisible(false)
 
---entity init event, used for when the avatar entity is loaded for the first time
 function events.entity_init()
-  --player functions goes here
+
 end
 
---tick event, called 20 times per second
 function events.tick()
-  --code goes here
+
 end
 
---render event, called every time your avatar is rendered
---it have two arguments, "delta" and "context"
---"delta" is the percentage between the last and the next tick (as a decimal value, 0.0 to 1.0)
---"context" is a string that tells from where this render event was called (the paperdoll, gui, player render, first person)
 function events.render(delta, context)
   --code goes here
+end
+
+
+--===            ===--
+--=== ANIMATIONS ===--
+--===            ===--
+
+
+
+--===      ===--
+--=== MISC ===--
+--===      ===--
+
+--=== Chat bubble spawn logic ===--
+function events.chat_send_message(msg)
+  local message_type = "default"
+  if msg:match("?$") then
+    chatbubble:say(msg)
+    sounds:playSound("Sounds.Speak.Question", player:getPos())
+  elseif msg == msg:upper() or msg:match("!$") then
+    chatbubble:say_bold(msg)
+    sounds:playSound("Sounds.Speak.Exclamation", player:getPos())
+  else
+    chatbubble:say(msg)
+    sounds:playSound("Sounds.Speak.Default", player:getPos())
+  end
+
+  local modifier = msg:sub(1, 1)
+  if modifier == ";" then
+    local cleanMsg = msg:sub(2)
+    return cleanMsg
+  elseif modifier == "/" then
+    return msg
+  end
+  return
+end
+
+
+--=== Play notification when mentioned ===--
+function pings.playRingtone() -- Required outside due to chat_recieve_message() being clientside
+  sounds:playSound("Sounds.ringers3", player:getPos())
+end
+
+function events.chat_receive_message(raw, text)
+  if not player:isLoaded() then
+    return
+  end
+  
+  if not text:find("^{\"translate\":\"chat.type.text\",") then
+    return
+  end
+
+  sender_name = raw:match("<(.-)>")
+  if sender_name == client.getViewer():getName() then
+    return
+  end
+
+  sanitised = raw:match(">(.+)")
+  if sanitised:find("[Zz][Ee][Dd]") then
+    pings.playRingtone()
+  end
 end

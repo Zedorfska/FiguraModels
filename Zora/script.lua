@@ -14,6 +14,7 @@ vanilla_model.ARMOR:setVisible(false)
 vanilla_model.HELMET_ITEM:setVisible(true)
 vanilla_model.CAPE:setVisible(false)
 vanilla_model.ELYTRA:setVisible(false)
+models.model.root.RightArm.RightItemPivot.Telebaton:setVisible(false)
 
 function events.entity_init()
   -- Experimental: Hiding the Figura logo. From some random person in the Discord
@@ -71,6 +72,28 @@ function events.tick()
   elseif not player:isBlocking() then
     was_blocking = false
   end
+
+  --=== Telebaton sounds ===--
+  --[[
+  local held_item = player:getHeldItem()
+  local holding_sword = held_item.id:find("sword") ~= nil
+  
+  if holding_sword and not was_holding_sword then
+    sounds:playSound("Sounds.Baton.telescopicon", player:getPos())
+  elseif not holding_sword and was_holding_sword then
+    sounds:playSound("Sounds.Baton.telescopicoff", player:getPos())
+  end
+
+  if held_item.id:find("sword") then
+    vanilla_model.RIGHT_ITEM:setVisible(false)
+    models.model.root.RightArm.RightItemPivot.Telebaton:setVisible(true)
+  else
+    vanilla_model.RIGHT_ITEM:setVisible(true)
+    models.model.root.RightArm.RightItemPivot.Telebaton:setVisible(false)
+  end
+
+  was_holding_sword = holding_sword
+  ]]
 end
 
 function events.render(delta, context)
@@ -105,23 +128,28 @@ end
 
 --=== Chat bubble spawn logic ===--
 function events.chat_send_message(msg)
+  local modifier = msg:sub(1, 1)
+  if modifier == "/" then
+    return msg
+  end
+  if modifier ~= "-" and modifier ~= "," then
+    return msg
+  end
+
+  local cleanMsg = msg:sub(2)
+
   local message_type = "default"
   if msg:match("?$") then
-    chatbubble:say(msg)
+    chatbubble:say(cleanMsg)
     sounds:playSound("Sounds.Speak.Question", player:getPos())
   elseif msg == msg:upper() or msg:match("!$") then
-    chatbubble:say_bold(msg)
+    chatbubble:say_bold(cleanMsg)
     sounds:playSound("Sounds.Speak.Exclamation", player:getPos())
   else
-    chatbubble:say(msg)
+    chatbubble:say(cleanMsg)
     sounds:playSound("Sounds.Speak.Default", player:getPos())
   end
 
-  local modifier = msg:sub(1, 1)
-  if modifier == ";" then
-    local cleanMsg = msg:sub(2)
-    return cleanMsg
-  end
   return
 end
 
